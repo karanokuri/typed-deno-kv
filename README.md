@@ -2,7 +2,7 @@
 
 Type-safe Deno.Kv wrapper.
 
-# Usage
+## Usage
 
 ```typescript
 import { TypedKv } from "https://raw.githubusercontent.com/karanokuri/typed-deno-kv/main/mod.ts";
