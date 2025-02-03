@@ -1,68 +1,68 @@
-export type TypedKvSchema = {
+export type Schema = {
   Key: Deno.KvKey;
   Value: unknown;
 };
 
-export type TypedKvKey<T extends TypedKvSchema> = T["Key"];
+export type Key<T extends Schema> = T["Key"];
 
-export type TypedKvValue<
-  T extends TypedKvSchema,
-  K extends TypedKvKey<T>,
-> = T extends TypedKvSchema ? K extends T["Key"] ? T["Value"] : never
+export type Value<
+  T extends Schema,
+  K extends Key<T>,
+> = T extends Schema ? K extends T["Key"] ? T["Value"] : never
   : never;
 
-export type TypedKvKeyPrefix<
-  T extends TypedKvSchema,
-> = TypedKvKey<T> extends [...infer Prefix, Deno.KvKeyPart] ? Prefix : [];
+export type KeyPrefix<
+  T extends Schema,
+> = Key<T> extends [...infer Prefix, Deno.KvKeyPart] ? Prefix : [];
 
-export type TypedKvKeyPrefixed<
-  T extends TypedKvSchema,
-  P extends TypedKvKeyPrefix<T>,
-> = TypedKvKey<T> extends infer K
-  ? K extends TypedKvKey<T> & [...P, ...Deno.KvKey] ? K : never
+export type KeyPrefixed<
+  T extends Schema,
+  P extends KeyPrefix<T>,
+> = Key<T> extends infer K
+  ? K extends Key<T> & [...P, ...Deno.KvKey] ? K : never
   : never;
 
-export type TypedKvListSelector<
-  T extends TypedKvSchema,
-  P extends TypedKvKeyPrefix<T>,
+export type ListSelector<
+  T extends Schema,
+  P extends KeyPrefix<T>,
 > =
   & Deno.KvListSelector
   & (
     | { prefix: P }
-    | { prefix: P; start: TypedKvKeyPrefixed<T, P> }
-    | { prefix: P; end: TypedKvKeyPrefixed<T, P> }
-    | { start: TypedKvKeyPrefixed<T, P>; end: TypedKvKeyPrefixed<T, P> }
+    | { prefix: P; start: KeyPrefixed<T, P> }
+    | { prefix: P; end: KeyPrefixed<T, P> }
+    | { start: KeyPrefixed<T, P>; end: KeyPrefixed<T, P> }
   );
 
-export type TypedKvEntry<
-  T extends TypedKvSchema,
-  K extends TypedKvKey<T>,
-> = K extends TypedKvKey<T> ? {
+export type Entry<
+  T extends Schema,
+  K extends Key<T>,
+> = K extends Key<T> ? {
     key: K;
-    value: TypedKvValue<T, K>;
+    value: Value<T, K>;
     versionstamp: string;
   }
   : never;
 
-export type TypedKvEntryMaybe<
-  T extends TypedKvSchema,
-  K extends TypedKvKey<T>,
+export type EntryMaybe<
+  T extends Schema,
+  K extends Key<T>,
 > =
-  | TypedKvEntry<T, K>
+  | Entry<T, K>
   | {
     key: K;
     value: null;
     versionstamp: null;
   };
 
-export type TypedKvListIterator<
-  T extends TypedKvSchema,
-  P extends TypedKvKeyPrefix<T>,
-> = AsyncIterableIterator<TypedKvEntry<T, TypedKvKeyPrefixed<T, P>>> & {
+export type ListIterator<
+  T extends Schema,
+  P extends KeyPrefix<T>,
+> = AsyncIterableIterator<Entry<T, KeyPrefixed<T, P>>> & {
   get cursor(): string;
 };
 
-export class TypedAtomicOperation<T extends TypedKvSchema> {
+export class AtomicOperation<T extends Schema> {
   private readonly op: Deno.AtomicOperation;
 
   constructor(op: Deno.AtomicOperation) {
@@ -70,8 +70,8 @@ export class TypedAtomicOperation<T extends TypedKvSchema> {
   }
 
   check(
-    ...checks: { key: TypedKvKey<T>; versionstamp: string | null }[]
-  ): TypedAtomicOperation<T> {
+    ...checks: { key: Key<T>; versionstamp: string | null }[]
+  ): AtomicOperation<T> {
     this.op.check(...checks);
     return this;
   }
@@ -80,17 +80,17 @@ export class TypedAtomicOperation<T extends TypedKvSchema> {
     return this.op.commit();
   }
 
-  set<K extends TypedKvKey<T>>(
+  set<K extends Key<T>>(
     key: K,
-    value: TypedKvValue<T, K>,
+    value: Value<T, K>,
     options?: { expireIn?: number },
-  ): TypedAtomicOperation<T> {
+  ): AtomicOperation<T> {
     this.op.set(key, value, options);
     return this;
   }
 }
 
-export class TypedKv<T extends TypedKvSchema> {
+export class Kv<T extends Schema> {
   private readonly kv: Deno.Kv;
 
   constructor(kv: Deno.Kv) {
@@ -101,8 +101,8 @@ export class TypedKv<T extends TypedKvSchema> {
     this.kv[Symbol.dispose]();
   }
 
-  atomic(): TypedAtomicOperation<T> {
-    return new TypedAtomicOperation(this.kv.atomic());
+  atomic(): AtomicOperation<T> {
+    return new AtomicOperation(this.kv.atomic());
   }
 
   close(): void {
@@ -113,12 +113,12 @@ export class TypedKv<T extends TypedKvSchema> {
     return this.kv.commitVersionstamp();
   }
 
-  delete(key: TypedKvKey<T>): Promise<void> {
+  delete(key: Key<T>): Promise<void> {
     return this.kv.delete(key);
   }
 
-  enqueue<U extends readonly TypedKvKey<T>[]>(
-    value: TypedKvValue<T, U[number]>,
+  enqueue<U extends readonly Key<T>[]>(
+    value: Value<T, U[number]>,
     options?: {
       delay?: number;
       keysIfUndelivered?: [...U];
@@ -128,49 +128,49 @@ export class TypedKv<T extends TypedKvSchema> {
     return this.kv.enqueue(value, options);
   }
 
-  get<K extends TypedKvKey<T>>(
+  get<K extends Key<T>>(
     key: K,
     options?: { consistency?: Deno.KvConsistencyLevel },
-  ): Promise<TypedKvEntryMaybe<T, K>> {
-    return this.kv.get(key, options) as Promise<TypedKvEntryMaybe<T, K>>;
+  ): Promise<EntryMaybe<T, K>> {
+    return this.kv.get(key, options) as Promise<EntryMaybe<T, K>>;
   }
 
-  getMany<U extends readonly TypedKvKey<T>[]>(
+  getMany<U extends readonly Key<T>[]>(
     keys: readonly [...U],
     options?: { consistency?: Deno.KvConsistencyLevel },
-  ): Promise<{ [K in keyof U]: TypedKvEntryMaybe<T, U[K]> }> {
+  ): Promise<{ [K in keyof U]: EntryMaybe<T, U[K]> }> {
     return this.kv.getMany(keys, options) as Promise<
-      { [K in keyof U]: TypedKvEntryMaybe<T, U[K]> }
+      { [K in keyof U]: EntryMaybe<T, U[K]> }
     >;
   }
 
-  list<P extends TypedKvKeyPrefix<T>>(
-    selector: TypedKvListSelector<T, P>,
+  list<P extends KeyPrefix<T>>(
+    selector: ListSelector<T, P>,
     options?: Deno.KvListOptions,
-  ): TypedKvListIterator<T, P> {
-    return this.kv.list(selector, options) as TypedKvListIterator<T, P>;
+  ): ListIterator<T, P> {
+    return this.kv.list(selector, options) as ListIterator<T, P>;
   }
 
   listenQueue(
-    handler: (value: TypedKvValue<T, TypedKvKey<T>>) => Promise<void> | void,
+    handler: (value: Value<T, Key<T>>) => Promise<void> | void,
   ): Promise<void> {
     return this.kv.listenQueue(handler);
   }
 
-  set<K extends TypedKvKey<T>>(
+  set<K extends Key<T>>(
     key: K,
-    value: TypedKvValue<T, K>,
+    value: Value<T, K>,
     options?: { expireIn?: number },
   ): Promise<Deno.KvCommitResult> {
     return this.kv.set(key, value, options);
   }
 
-  watch<U extends readonly TypedKvKey<T>[]>(
+  watch<U extends readonly Key<T>[]>(
     keys: readonly [...U],
     options?: { raw?: boolean },
-  ): ReadableStream<{ [K in keyof U]: TypedKvEntryMaybe<T, U[K]> }> {
+  ): ReadableStream<{ [K in keyof U]: EntryMaybe<T, U[K]> }> {
     return this.kv.watch(keys, options) as ReadableStream<
-      { [K in keyof U]: TypedKvEntryMaybe<T, U[K]> }
+      { [K in keyof U]: EntryMaybe<T, U[K]> }
     >;
   }
 }

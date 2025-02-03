@@ -5,7 +5,7 @@ Type-safe Deno.Kv wrapper.
 ## Usage
 
 ```typescript
-import { TypedKv } from "https://raw.githubusercontent.com/karanokuri/typed-deno-kv/main/mod.ts";
+import * as TypedKv from "https://raw.githubusercontent.com/karanokuri/typed-deno-kv/main/mod.ts";
 
 type UserId = string;
 type User = {
@@ -18,7 +18,7 @@ type MessageId = string;
 type Message = object;
 
 // Opening a database
-using kv = new TypedKv<
+using kv = new TypedKv.Kv<
   {
     Key: ["preferences", UserId];
     Value: User;

@@ -1,12 +1,4 @@
-import {
-  TypedKv,
-  TypedKvEntry,
-  TypedKvEntryMaybe,
-  TypedKvKey,
-  TypedKvKeyPrefix,
-  TypedKvKeyPrefixed,
-  TypedKvValue,
-} from "./mod.ts";
+import * as TypedKv from "./mod.ts";
 
 const assertEqualsType = <A, B>(
   _: [A] extends [B] ? [B] extends [A] ? true : false : false,
@@ -26,48 +18,48 @@ Deno.test("Test utility types", () => {
   };
 
   assertEqualsType<
-    TypedKvKey<TestSchema>,
+    TypedKv.Key<TestSchema>,
     | ["preferences", string]
     | ["messages", string, string]
     | ["last_message_id"]
   >(true);
 
   assertEqualsType<
-    TypedKvValue<TestSchema, ["preferences", string]>,
+    TypedKv.Value<TestSchema, ["preferences", string]>,
     { username: string; theme: string; language: string }
   >(true);
 
   assertEqualsType<
-    TypedKvValue<TestSchema, ["messages", string, string]>,
+    TypedKv.Value<TestSchema, ["messages", string, string]>,
     object
   >(true);
 
   assertEqualsType<
-    TypedKvValue<TestSchema, ["last_message_id"]>,
+    TypedKv.Value<TestSchema, ["last_message_id"]>,
     string
   >(true);
 
   assertEqualsType<
-    TypedKvKeyPrefix<TestSchema>,
+    TypedKv.KeyPrefix<TestSchema>,
     | ["preferences"]
     | ["messages", string]
     | []
   >(true);
 
   assertEqualsType<
-    TypedKvKeyPrefixed<TestSchema, []>,
+    TypedKv.KeyPrefixed<TestSchema, []>,
     | ["preferences", string]
     | ["messages", string, string]
     | ["last_message_id"]
   >(true);
 
   assertEqualsType<
-    TypedKvKeyPrefixed<TestSchema, ["preferences"]>,
+    TypedKv.KeyPrefixed<TestSchema, ["preferences"]>,
     ["preferences", string]
   >(true);
 
   assertEqualsType<
-    TypedKvEntry<TestSchema, ["preferences", string]>,
+    TypedKv.Entry<TestSchema, ["preferences", string]>,
     {
       key: ["preferences", string];
       value: { username: string; theme: string; language: string };
@@ -76,7 +68,7 @@ Deno.test("Test utility types", () => {
   >(true);
 
   assertEqualsType<
-    TypedKvEntry<
+    TypedKv.Entry<
       TestSchema,
       ["messages", string, string] | ["last_message_id"]
     >,
@@ -92,7 +84,7 @@ Deno.test("Test utility types", () => {
   >(true);
 
   assertEqualsType<
-    TypedKvEntry<
+    TypedKv.Entry<
       TestSchema,
       ["messages", string, string] | ["last_message_id"]
     >,
@@ -104,7 +96,7 @@ Deno.test("Test utility types", () => {
   >(false);
 
   assertEqualsType<
-    TypedKvEntryMaybe<TestSchema, ["preferences", string]>,
+    TypedKv.EntryMaybe<TestSchema, ["preferences", string]>,
     {
       key: ["preferences", string];
       value: { username: string; theme: string; language: string };
@@ -117,7 +109,7 @@ Deno.test("Test utility types", () => {
   >(true);
 
   assertEqualsType<
-    TypedKvEntryMaybe<
+    TypedKv.EntryMaybe<
       TestSchema,
       ["messages", string, string] | ["last_message_id"]
     >,
@@ -137,7 +129,7 @@ Deno.test("Test utility types", () => {
   >(true);
 });
 
-Deno.test("Test TypedKv types", () => {
+Deno.test("Test TypedKv. types", () => {
   type TestSchema = {
     Key: ["preferences", string];
     Value: { username: string; theme: string; language: string };
@@ -149,7 +141,7 @@ Deno.test("Test TypedKv types", () => {
     Value: string;
   };
 
-  ((kv: TypedKv<TestSchema>) => {
+  ((kv: TypedKv.Kv<TestSchema>) => {
     assertEqualsType<
       typeof kv.delete,
       (
@@ -161,7 +153,7 @@ Deno.test("Test TypedKv types", () => {
     >(true);
   });
 
-  (async (kv: TypedKv<TestSchema>) => {
+  (async (kv: TypedKv.Kv<TestSchema>) => {
     const key: ["preferences", string] = ["preferences", "alan"];
     const value = {
       username: "alan",
@@ -180,7 +172,7 @@ Deno.test("Test TypedKv types", () => {
     >(true);
   });
 
-  ((kv: TypedKv<TestSchema>) => {
+  ((kv: TypedKv.Kv<TestSchema>) => {
     const result = kv.enqueue("foo", {
       keysIfUndelivered: [["last_message_id"]],
     });
@@ -188,7 +180,7 @@ Deno.test("Test TypedKv types", () => {
     assertEqualsType<typeof result, Promise<Deno.KvCommitResult>>(true);
   });
 
-  (async (kv: TypedKv<TestSchema>) => {
+  (async (kv: TypedKv.Kv<TestSchema>) => {
     const result = await kv.get(["preferences", "ada"]);
 
     assertEqualsType<
@@ -205,7 +197,7 @@ Deno.test("Test TypedKv types", () => {
     >(true);
   });
 
-  (async (kv: TypedKv<TestSchema>) => {
+  (async (kv: TypedKv.Kv<TestSchema>) => {
     const result = await kv.getMany([
       ["messages", "room1", "message1"],
       ["last_message_id"],
@@ -236,7 +228,7 @@ Deno.test("Test TypedKv types", () => {
     >(true);
   });
 
-  ((kv: TypedKv<TestSchema>) => {
+  ((kv: TypedKv.Kv<TestSchema>) => {
     const result = kv.list({ prefix: [] });
 
     assertEqualsType<
@@ -259,7 +251,7 @@ Deno.test("Test TypedKv types", () => {
     >(true);
   });
 
-  ((kv: TypedKv<TestSchema>) => {
+  ((kv: TypedKv.Kv<TestSchema>) => {
     kv.listenQueue((value) => {
       assertEqualsType<
         typeof value,
@@ -270,7 +262,7 @@ Deno.test("Test TypedKv types", () => {
     });
   });
 
-  (async (kv: TypedKv<TestSchema>) => {
+  (async (kv: TypedKv.Kv<TestSchema>) => {
     const result = await kv.set(["preferences", "ada"], {
       username: "ada",
       theme: "dark",
@@ -280,7 +272,7 @@ Deno.test("Test TypedKv types", () => {
     assertEqualsType<typeof result, Deno.KvCommitResult>(true);
   });
 
-  ((kv: TypedKv<TestSchema>) => {
+  ((kv: TypedKv.Kv<TestSchema>) => {
     const result = kv.watch([
       ["messages", "room1", "message1"],
       ["last_message_id"],
