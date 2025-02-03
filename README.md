@@ -47,7 +47,7 @@ using kv = new TypedKv.Kv<
 
 {
   const entry = await kv.get(["preferences", "ada"]);
-  console.log(entry.key); // ["preferences", "ada"]
+  console.log(entry.key); // ["preferences", string]
   console.log(entry.value); // User | null
   console.log(entry.versionstamp);
 }
