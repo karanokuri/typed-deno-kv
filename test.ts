@@ -14,7 +14,7 @@ Deno.test("Test utility types", () => {
     Value: object;
   } | {
     Key: ["last_message_id"];
-    Value: string;
+    Value: Deno.KvU64;
   };
 
   assertEqualsType<
@@ -36,7 +36,12 @@ Deno.test("Test utility types", () => {
 
   assertEqualsType<
     TypedKv.Value<TestSchema, ["last_message_id"]>,
-    string
+    Deno.KvU64
+  >(true);
+
+  assertEqualsType<
+    TypedKv.KeyU64<TestSchema>,
+    ["last_message_id"]
   >(true);
 
   assertEqualsType<
@@ -78,7 +83,7 @@ Deno.test("Test utility types", () => {
       versionstamp: string;
     } | {
       key: ["last_message_id"];
-      value: string;
+      value: Deno.KvU64;
       versionstamp: string;
     }
   >(true);
@@ -119,7 +124,7 @@ Deno.test("Test utility types", () => {
       versionstamp: string;
     } | {
       key: ["last_message_id"];
-      value: string;
+      value: Deno.KvU64;
       versionstamp: string;
     } | {
       key: ["messages", string, string] | ["last_message_id"];
@@ -138,8 +143,50 @@ Deno.test("Test TypedKv. types", () => {
     Value: object;
   } | {
     Key: ["last_message_id"];
-    Value: string;
+    Value: Deno.KvU64;
   };
+
+  (async (kv: TypedKv.Kv<TestSchema>) => {
+    const key: ["preferences", string] = ["preferences", "alan"];
+    const value = {
+      username: "alan",
+      theme: "light",
+      language: "en-GB",
+    };
+
+    const result = await kv.atomic()
+      .check({ key, versionstamp: null })
+      .enqueue(value, { keysIfUndelivered: [["preferences", "unknown"]] })
+      .set(key, value)
+      .commit();
+
+    assertEqualsType<
+      typeof result,
+      Deno.KvCommitResult | Deno.KvCommitError
+    >(true);
+
+    await kv.atomic().mutate({ key, type: "delete" }).commit();
+    await kv.atomic().mutate({ key, type: "set", value }).commit();
+    await kv.atomic().mutate({
+      key: ["last_message_id"],
+      type: "max",
+      value: new Deno.KvU64(1n),
+    }).commit();
+    await kv.atomic().mutate({
+      key: ["last_message_id"],
+      type: "min",
+      value: new Deno.KvU64(1n),
+    }).commit();
+    await kv.atomic().mutate({
+      key: ["last_message_id"],
+      type: "sum",
+      value: new Deno.KvU64(1n),
+    }).commit();
+
+    await kv.atomic().max(["last_message_id"], 1n).commit();
+    await kv.atomic().min(["last_message_id"], 1n).commit();
+    await kv.atomic().sum(["last_message_id"], 1n).commit();
+  });
 
   ((kv: TypedKv.Kv<TestSchema>) => {
     assertEqualsType<
@@ -153,28 +200,13 @@ Deno.test("Test TypedKv. types", () => {
     >(true);
   });
 
-  (async (kv: TypedKv.Kv<TestSchema>) => {
-    const key: ["preferences", string] = ["preferences", "alan"];
-    const value = {
-      username: "alan",
-      theme: "light",
-      language: "en-GB",
-    };
-
-    const result = await kv.atomic()
-      .check({ key, versionstamp: null })
-      .set(key, value)
-      .commit();
-
-    assertEqualsType<
-      typeof result,
-      Deno.KvCommitResult | Deno.KvCommitError
-    >(true);
-  });
-
   ((kv: TypedKv.Kv<TestSchema>) => {
-    const result = kv.enqueue("foo", {
-      keysIfUndelivered: [["last_message_id"]],
+    const result = kv.enqueue({
+      username: "new",
+      theme: "light",
+      language: "en-US",
+    }, {
+      keysIfUndelivered: [["preferences", "unknown"]],
     });
 
     assertEqualsType<typeof result, Promise<Deno.KvCommitResult>>(true);
@@ -217,7 +249,7 @@ Deno.test("Test TypedKv. types", () => {
         },
         {
           key: ["last_message_id"];
-          value: string;
+          value: Deno.KvU64;
           versionstamp: string;
         } | {
           key: ["last_message_id"];
@@ -244,7 +276,7 @@ Deno.test("Test TypedKv. types", () => {
           versionstamp: string;
         } | {
           key: ["last_message_id"];
-          value: string;
+          value: Deno.KvU64;
           versionstamp: string;
         }
       > & { cursor: string }
@@ -257,7 +289,7 @@ Deno.test("Test TypedKv. types", () => {
         typeof value,
         | { username: string; theme: string; language: string }
         | object
-        | string
+        | Deno.KvU64
       >(true);
     });
   });
@@ -292,7 +324,7 @@ Deno.test("Test TypedKv. types", () => {
         },
         {
           key: ["last_message_id"];
-          value: string;
+          value: Deno.KvU64;
           versionstamp: string;
         } | {
           key: ["last_message_id"];

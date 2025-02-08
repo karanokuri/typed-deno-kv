@@ -11,6 +11,10 @@ export type Value<
 > = T extends Schema ? K extends T["Key"] ? T["Value"] : never
   : never;
 
+export type KeyU64<T extends Schema> = Key<T> extends infer K
+  ? K extends Key<T> ? Value<T, K> extends Deno.KvU64 ? K : never : never
+  : never;
+
 export type KeyPrefix<
   T extends Schema,
 > = Key<T> extends [...infer Prefix, Deno.KvKeyPart] ? Prefix : [];
@@ -69,9 +73,7 @@ export class AtomicOperation<T extends Schema> {
     this.op = op;
   }
 
-  check(
-    ...checks: { key: Key<T>; versionstamp: string | null }[]
-  ): AtomicOperation<T> {
+  check(...checks: { key: Key<T>; versionstamp: string | null }[]): this {
     this.op.check(...checks);
     return this;
   }
@@ -80,12 +82,72 @@ export class AtomicOperation<T extends Schema> {
     return this.op.commit();
   }
 
+  delete(key: Key<T>): this {
+    this.op.delete(key);
+    return this;
+  }
+
+  enqueue<U extends readonly Key<T>[]>(
+    value: Value<T, U[number]>,
+    options?: {
+      delay?: number;
+      keysIfUndelivered?: [...U];
+      backoffSchedule?: number[];
+    },
+  ): this {
+    this.op.enqueue(value, options);
+    return this;
+  }
+
+  max(key: KeyU64<T>, n: bigint): this {
+    this.op.max(key, n);
+    return this;
+  }
+
+  min(key: KeyU64<T>, n: bigint): this {
+    this.op.min(key, n);
+    return this;
+  }
+
+  mutate<K extends Key<T>>(
+    ...mutations: (
+      & { key: K }
+      & (
+        | { type: "set"; value: Value<T, K>; expireIn?: number }
+        | { type: "delete" }
+        | (Value<T, K> extends Deno.KvU64 ? {
+            type: "sum";
+            value: Deno.KvU64;
+          }
+          : never)
+        | (Value<T, K> extends Deno.KvU64 ? {
+            type: "max";
+            value: Deno.KvU64;
+          }
+          : never)
+        | (Value<T, K> extends Deno.KvU64 ? {
+            type: "min";
+            value: Deno.KvU64;
+          }
+          : never)
+      )
+    )[]
+  ): this {
+    this.op.mutate(...mutations);
+    return this;
+  }
+
   set<K extends Key<T>>(
     key: K,
     value: Value<T, K>,
     options?: { expireIn?: number },
-  ): AtomicOperation<T> {
+  ): this {
     this.op.set(key, value, options);
+    return this;
+  }
+
+  sum(key: Key<T>, n: bigint): this {
+    this.op.sum(key, n);
     return this;
   }
 }
